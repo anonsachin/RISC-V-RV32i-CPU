@@ -8,7 +8,7 @@ Check the folders for assignments for particular days.
 -----------------------------------------------
 The detail for ABI is found 
 ---------------------------
- [ABI](Day2/README.md)
+[ABI](Day2/README.md)
 
 ----------------------------------------
 Acknowledgements
