@@ -55,9 +55,22 @@
       @1
          //Decoding
          //Getting the type of instruction
+         // i type
          $is_i_instr = $imem_rd_data[6:2] ==? 5'b0000x ||
                        $imem_rd_data[6:2] ==? 5'b001x0 ||
-                       $imem_rd_data[6:2] ==? 5'b11001;
+                       $imem_rd_data[6:2] == 5'b11001;
+         // r type
+         $is_r_instr = $imem_rd_data[6:2] ==? 5'b011x0 ||
+                       $imem_rd_data[6:2] == 5'b01011 ||
+                       $imem_rd_data[6:2] == 5'b10100;
+         // s type
+         $is_s_instr = $imem_rd_data[6:2] ==? 5'b0100x;
+         // b type
+         $is_b_instr = $imem_rd_data[6:2] == 5'b11000;
+         // j type
+         $is_j_instr = $imem_rd_data[6:2] == 5'b11011;
+         // u type
+         $is_u_instr = $imem_rd_data[6:2] ==? 5'b0x101;
 
       // Note: Because of the magic we are using for visualisation, if visualisation is enabled below,
       //       be sure to avoid having unassigned signals (which you might be using for random inputs)
