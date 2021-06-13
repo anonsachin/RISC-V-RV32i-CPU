@@ -85,6 +85,19 @@
                     $is_j_instr
                     ? { {12{$imem_rd_data[31]}}, $imem_rd_data[19:12], $imem_rd_data[20], $imem_rd_data[30:21], 1'b0 } :
                     0;
+         // extracting other instuction components
+         //funct7
+         $funct7[6:0] = $is_r_instr ? $imem_rd_data[31:25] : {7{1'b0}};
+         //funct3
+         $funct3[2:0] = ( $is_i_instr || $is_r_instr || $is_s_instr || $is_b_instr ) ? $imem_rd_data[14:12] : {3{1'b0}};
+         //rs1
+         $rs1[4:0] = ( $is_i_instr || $is_r_instr || $is_s_instr || $is_b_instr ) ? $imem_rd_data[19:15] : {5{1'b0}};
+         //rs2
+         $rs2[4:0] = ( $is_r_instr || $is_s_instr || $is_b_instr ) ? $imem_rd_data[24:20] : {5{1'b0}};
+         //rd 
+         $rd[4:0] = ( $is_i_instr || $is_r_instr || $is_u_instr || $is_j_instr ) ? $imem_rd_data[11:7] : {5{1'b0}};
+         //opcode
+         $opcode[6:0] = $imem_rd_data[6:0];
 
       // Note: Because of the magic we are using for visualisation, if visualisation is enabled below,
       //       be sure to avoid having unassigned signals (which you might be using for random inputs)
