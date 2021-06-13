@@ -41,151 +41,143 @@
       @0
          // reset setup
          $reset = *reset;
-         // creating 3 cycle activate
-         // activates only once in 3
-         // cycles
-         $start = ( $reset == 1'b0 && >>1$reset == 1'b1 ) ? 1'b1 : 1'b0;
-         $valid = 
-                $reset
-                ? 1'b0 :
-                $start
-                ? 1'b1 : >>3$valid;
-         ?$valid
-            // Program counter setup
-            $pc[31:0] = 
-                $reset
-                ? 0 :
-                >>1$reset
-                ? 0 :
-                >>3$valid_target_br
-                ? >>3$br_target_pc :
-                >>3$pc + 32'd4;
+         
+         // Program counter setup
+         $pc[31:0] = 
+             $reset
+             ? 0 :
+             >>1$reset
+             ? 0 :
+             >>3$valid_target_br
+             ? >>3$br_target_pc :
+             >>1$pc + 32'd4;
          // Getting instruction from memmory
          $imem_rd_en = $reset;
          $imem_rd_addr[M4_IMEM_INDEX_CNT-1:0] = $pc[M4_IMEM_INDEX_CNT+1:2];
          
       @1
-         ?$valid
-            //Decoding
-            //Getting the type of instruction
-            // i type
-            $is_i_instr = $imem_rd_data[6:2] ==? 5'b0000x ||
-                          $imem_rd_data[6:2] ==? 5'b001x0 ||
-                          $imem_rd_data[6:2] == 5'b11001;
-            // r type
-            $is_r_instr = $imem_rd_data[6:2] ==? 5'b011x0 ||
-                          $imem_rd_data[6:2] == 5'b01011 ||
-                          $imem_rd_data[6:2] == 5'b10100;
-            // s type
-            $is_s_instr = $imem_rd_data[6:2] ==? 5'b0100x;
-            // b type
-            $is_b_instr = $imem_rd_data[6:2] == 5'b11000;
-            // j type
-            $is_j_instr = $imem_rd_data[6:2] == 5'b11011;
-            // u type
-            $is_u_instr = $imem_rd_data[6:2] ==? 5'b0x101;
+         //Decoding
+         //Getting the type of instruction
+         // i type
+         $is_i_instr = $imem_rd_data[6:2] ==? 5'b0000x ||
+                       $imem_rd_data[6:2] ==? 5'b001x0 ||
+                       $imem_rd_data[6:2] == 5'b11001;
+         // r type
+         $is_r_instr = $imem_rd_data[6:2] ==? 5'b011x0 ||
+                       $imem_rd_data[6:2] == 5'b01011 ||
+                       $imem_rd_data[6:2] == 5'b10100;
+         // s type
+         $is_s_instr = $imem_rd_data[6:2] ==? 5'b0100x;
+         // b type
+         $is_b_instr = $imem_rd_data[6:2] == 5'b11000;
+         // j type
+         $is_j_instr = $imem_rd_data[6:2] == 5'b11011;
+         // u type
+         $is_u_instr = $imem_rd_data[6:2] ==? 5'b0x101;
 
 
-            // extracting other instuction components
-            //funct7
-            ?$is_r_instr
-               $funct7[6:0] = $imem_rd_data[31:25];
-            //funct3
-            $funct3_valid = $is_i_instr || $is_r_instr || $is_s_instr || $is_b_instr;
-            ?$funct3_valid
-               $funct3[2:0] = $imem_rd_data[14:12];
-            //rs1
-            $rs1_valid = $is_i_instr || $is_r_instr || $is_s_instr || $is_b_instr;
-            ?$rs1_valid
-               $rs1[4:0] = $imem_rd_data[19:15];
-            //rs2
-            $rs2_valid = $is_r_instr || $is_s_instr || $is_b_instr;
-            ?$rs2_valid
-               $rs2[4:0] = $imem_rd_data[24:20];
-            //rd 
-            $rd_valid = $is_i_instr || $is_r_instr || $is_u_instr || $is_j_instr ;
-            ?$rd_valid
-               $rd[4:0] = $imem_rd_data[11:7];
-            //opcode
-            $opcode[6:0] = $imem_rd_data[6:0];
+         // extracting other instuction components
+         //funct7
+         ?$is_r_instr
+            $funct7[6:0] = $imem_rd_data[31:25];
+         //funct3
+         $funct3_valid = $is_i_instr || $is_r_instr || $is_s_instr || $is_b_instr;
+         ?$funct3_valid
+            $funct3[2:0] = $imem_rd_data[14:12];
+         //rs1
+         $rs1_valid = $is_i_instr || $is_r_instr || $is_s_instr || $is_b_instr;
+         ?$rs1_valid
+            $rs1[4:0] = $imem_rd_data[19:15];
+         //rs2
+         $rs2_valid = $is_r_instr || $is_s_instr || $is_b_instr;
+         ?$rs2_valid
+            $rs2[4:0] = $imem_rd_data[24:20];
+         //rd 
+         $rd_valid = $is_i_instr || $is_r_instr || $is_u_instr || $is_j_instr ;
+         ?$rd_valid
+            $rd[4:0] = $imem_rd_data[11:7];
+         //opcode
+         $opcode[6:0] = $imem_rd_data[6:0];
 
-            //identifying the instructions
-            $dec_bits[10:0] = { $funct7[5], $funct3, $opcode };
-            // branchs
-            $is_beq = $dec_bits ==? 11'bx_000_1100011;
-            $is_bne = $dec_bits ==? 11'bx_001_1100011;
-            $is_blt = $dec_bits ==? 11'bx_100_1100011;
-            $is_bge = $dec_bits ==? 11'bx_101_1100011;
-            $is_bltu = $dec_bits ==? 11'bx_110_1100011;
-            $is_bgeu = $dec_bits ==? 11'bx_111_1100011;
+         //identifying the instructions
+         $dec_bits[10:0] = { $funct7[5], $funct3, $opcode };
+         // branchs
+         $is_beq = $dec_bits ==? 11'bx_000_1100011;
+         $is_bne = $dec_bits ==? 11'bx_001_1100011;
+         $is_blt = $dec_bits ==? 11'bx_100_1100011;
+         $is_bge = $dec_bits ==? 11'bx_101_1100011;
+         $is_bltu = $dec_bits ==? 11'bx_110_1100011;
+         $is_bgeu = $dec_bits ==? 11'bx_111_1100011;
 
-            //arithmetic add
-            $is_add = $dec_bits ==? 11'b0_000_0110011;
-            $is_addi = $dec_bits ==? 11'bx_000_0010011;
-            
-            // extracting the immediate values for the instr
-            $imm[31:0] = 
-                       $is_i_instr
-                       ? { {21{$imem_rd_data[31]}}, $imem_rd_data[30:20] } :
-                       $is_s_instr
-                       ? { {21{$imem_rd_data[31]}}, $imem_rd_data[30:25], $imem_rd_data[11:7] } :
-                       $is_b_instr
-                       ? { {20{$imem_rd_data[31]}}, $imem_rd_data[7], $imem_rd_data[30:25], $imem_rd_data[11:8], 1'b0 } :
-                       $is_u_instr
-                       ? { $imem_rd_data[31:12], {12{1'b0}} } :
-                       $is_j_instr
-                       ? { {12{$imem_rd_data[31]}}, $imem_rd_data[19:12], $imem_rd_data[20], $imem_rd_data[30:21], 1'b0 } :
-                       0;
+         //arithmetic add
+         $is_add = $dec_bits ==? 11'b0_000_0110011;
+         $is_addi = $dec_bits ==? 11'bx_000_0010011;
+
+         // extracting the immediate values for the instr
+         $imm[31:0] = 
+                    $is_i_instr
+                    ? { {21{$imem_rd_data[31]}}, $imem_rd_data[30:20] } :
+                    $is_s_instr
+                    ? { {21{$imem_rd_data[31]}}, $imem_rd_data[30:25], $imem_rd_data[11:7] } :
+                    $is_b_instr
+                    ? { {20{$imem_rd_data[31]}}, $imem_rd_data[7], $imem_rd_data[30:25], $imem_rd_data[11:8], 1'b0 } :
+                    $is_u_instr
+                    ? { $imem_rd_data[31:12], {12{1'b0}} } :
+                    $is_j_instr
+                    ? { {12{$imem_rd_data[31]}}, $imem_rd_data[19:12], $imem_rd_data[20], $imem_rd_data[30:21], 1'b0 } :
+                    0;
          
          //Silencing these signals for current work
          `BOGUS_USE( $is_beq $is_bne $is_blt $is_bge $is_bltu $is_bgeu $is_add $is_addi )
       @2
-         ?$valid
-            //reading register
-            $rf_rd_en1 = $rs1_valid;
-            $rf_rd_en2 = $rs2_valid;
-            ?$rs1_valid
-               $rf_rd_index1[4:0] = $rs1;
-               $src1_value[31:0] = 
-                                 ( >>1$rd == $rs1 ) && >>1$rf_wr_en
-                                 ? >>1$result :
-                                 $rf_rd_data1;
-            ?$rs2_valid
-               $rf_rd_index2[4:0] = $rs2;
-               $src2_value[31:0] = 
-                                ( >>1$rd== $rs2) && >>1$rf_wr_en
-                                ? >>1$result :
-                                $rf_rd_data2;
+
+         //reading register
+         $rf_rd_en1 = $rs1_valid;
+         $rf_rd_en2 = $rs2_valid;
+         ?$rs1_valid
+            $rf_rd_index1[4:0] = $rs1;
+            $src1_value[31:0] = 
+                              ( >>1$rd == $rs1 ) && >>1$rf_wr_en
+                              ? >>1$result :
+                              $rf_rd_data1;
+         ?$rs2_valid
+            $rf_rd_index2[4:0] = $rs2;
+            $src2_value[31:0] = 
+                             ( >>1$rd== $rs2) && >>1$rf_wr_en
+                             ? >>1$result :
+                             $rf_rd_data2;
 
       @3
+         //branching
+         $valid = !(>>1$target_br || >>2$target_br);
+         $target_br = $is_b_instr;
+         $valid_target_br = $valid && $target_br;
+         //ALU
          ?$valid
-            //ALU
             $result[31:0] = 
                      $is_addi
                      ? $src1_value + $imm :
                      $is_add
                      ? $src1_value + $src2_value :
                      32'bx;
-            //branching
-            $target_br = $is_b_instr;
-            $valid_target_br = $valid && $target_br;
-            ?$target_br
-               //based on the type of branching function and its
-               //test we will update the pc else just update it
-               // by one and exit the branching process
-               $br_target_pc[31:0] = 
-                                  ($is_beq && ( $src1_value == $src2_value )) ||
-                                  ($is_bne && ( $src1_value != $src2_value )) ||
-                                  ($is_blt && ( $src1_value < $src2_value )^( $src1_value[31] != $src2_value[31] )) ||
-                                  ($is_bge && ( $src1_value >= $src2_value )^( $src1_value[31] != $src2_value[31] )) ||
-                                  ($is_bltu && ( $src1_value < $src2_value )) ||
-                                  ($is_bgeu && ( $src1_value >= $src2_value ))
-                                  ? $pc + $imm : $pc + 32'd1;
-            //Writing to register
-            $rf_wr_en = ( $rd == 5'd0 ) ? 1'b0 : $rd_valid;
-            ?$rd_valid
-               $rf_wr_index[4:0] = $rd;
-               $rf_wr_data[31:0] = $result;
+
+         ?$target_br
+            //based on the type of branching function and its
+            //test we will update the pc else just update it
+            // by one and exit the branching process
+            $br_target_pc[31:0] = 
+                               ($is_beq && ( $src1_value == $src2_value )) ||
+                               ($is_bne && ( $src1_value != $src2_value )) ||
+                               ($is_blt && ( $src1_value < $src2_value )^( $src1_value[31] != $src2_value[31] )) ||
+                               ($is_bge && ( $src1_value >= $src2_value )^( $src1_value[31] != $src2_value[31] )) ||
+                               ($is_bltu && ( $src1_value < $src2_value )) ||
+                               ($is_bgeu && ( $src1_value >= $src2_value ))
+                               ? $pc + $imm : $pc + 32'd4;
+         //Writing to register
+         $rf_wr_en = (( $rd == 5'd0 ) ? 1'b0 : $rd_valid) && $valid;
+         ?$rd_valid
+            $rf_wr_index[4:0] = $rd;
+            $rf_wr_data[31:0] = $result;
          
 
       // Note: Because of the magic we are using for visualisation, if visualisation is enabled below,
