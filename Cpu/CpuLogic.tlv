@@ -142,6 +142,11 @@
                   $is_add
                   ? $src1_value + $src2_value :
                   32'bx;
+         //Writing to register
+         $rf_wr_en = ( $rd == 5'd0 ) ? 1'b0 : $rd_valid;
+         ?$rd_valid
+            $rf_wr_index[4:0] = $rd;
+            $rf_wr_data[31:0] = $result;
 
       // Note: Because of the magic we are using for visualisation, if visualisation is enabled below,
       //       be sure to avoid having unassigned signals (which you might be using for random inputs)
