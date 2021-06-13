@@ -47,6 +47,8 @@
              ? 0 :
              >>1$reset
              ? 0 :
+             >>1$target_br
+             ? >>1$br_target_pc :
              >>1$pc + 32'd4;
          // Getting instruction from memmory
          $imem_rd_en = $reset;
@@ -147,6 +149,22 @@
          ?$rd_valid
             $rf_wr_index[4:0] = $rd;
             $rf_wr_data[31:0] = $result;
+         
+         //branching
+         $target_br = $is_b_instr;
+         ?$target_br
+            //based on the type of branching function and its
+            //test we will update the pc else just update it
+            // by one and exit the branching process
+            $br_target_pc[31:0] = 
+                               ($is_beq && ( $src1_value == $src2_value )) ||
+                               ($is_bne && ( $src1_value != $src2_value )) ||
+                               ($is_blt && ( $src1_value < $src2_value )^( $src1_value[31] != $src2_value[31] )) ||
+                               ($is_bge && ( $src1_value >= $src2_value )^( $src1_value[31] != $src2_value[31] )) ||
+                               ($is_bltu && ( $src1_value < $src2_value )) ||
+                               ($is_bgeu && ( $src1_value >= $src2_value ))
+                               ? $pc + $imm : $pc + 32'd1;
+         
 
       // Note: Because of the magic we are using for visualisation, if visualisation is enabled below,
       //       be sure to avoid having unassigned signals (which you might be using for random inputs)
@@ -154,7 +172,7 @@
 
    
    // Assert these to end simulation (before Makerchip cycle limit).
-   *passed = *cyc_cnt > 40;
+   *passed = |cpu/xreg[10]>>5$value == (1+2+3+4+5+6+7+8+9); //*cyc_cnt > 40;
    *failed = 1'b0;
    
    // Macro instantiations for:
