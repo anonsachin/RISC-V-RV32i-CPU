@@ -71,6 +71,20 @@
          $is_j_instr = $imem_rd_data[6:2] == 5'b11011;
          // u type
          $is_u_instr = $imem_rd_data[6:2] ==? 5'b0x101;
+         
+         // extracting the immediate values for the instr
+         $imm[31:0] = 
+                    $is_i_instr
+                    ? { {21{$imem_rd_data[31]}}, $imem_rd_data[30:20] } :
+                    $is_s_instr
+                    ? { {21{$imem_rd_data[31]}}, $imem_rd_data[30:25], $imem_rd_data[11:7] } :
+                    $is_b_instr
+                    ? { {20{$imem_rd_data[31]}}, $imem_rd_data[7], $imem_rd_data[30:25], $imem_rd_data[11:8], 1'b0 } :
+                    $is_u_instr
+                    ? { $imem_rd_data[31:12], {12{1'b0}} } :
+                    $is_j_instr
+                    ? { {12{$imem_rd_data[31]}}, $imem_rd_data[19:12], $imem_rd_data[20], $imem_rd_data[30:21], 1'b0 } :
+                    0;
 
       // Note: Because of the magic we are using for visualisation, if visualisation is enabled below,
       //       be sure to avoid having unassigned signals (which you might be using for random inputs)
