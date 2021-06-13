@@ -87,17 +87,45 @@
                     0;
          // extracting other instuction components
          //funct7
-         $funct7[6:0] = $is_r_instr ? $imem_rd_data[31:25] : {7{1'b0}};
+         ?$is_r_instr
+            $funct7[6:0] = $imem_rd_data[31:25];
          //funct3
-         $funct3[2:0] = ( $is_i_instr || $is_r_instr || $is_s_instr || $is_b_instr ) ? $imem_rd_data[14:12] : {3{1'b0}};
+         $funct3_valid = $is_i_instr || $is_r_instr || $is_s_instr || $is_b_instr;
+         ?$funct3_valid
+            $funct3[2:0] = $imem_rd_data[14:12];
          //rs1
-         $rs1[4:0] = ( $is_i_instr || $is_r_instr || $is_s_instr || $is_b_instr ) ? $imem_rd_data[19:15] : {5{1'b0}};
+         $rs1_valid = $is_i_instr || $is_r_instr || $is_s_instr || $is_b_instr;
+         ?$rs1_valid
+            $rs1[4:0] = $imem_rd_data[19:15];
          //rs2
-         $rs2[4:0] = ( $is_r_instr || $is_s_instr || $is_b_instr ) ? $imem_rd_data[24:20] : {5{1'b0}};
+         $rs2_valid = $is_r_instr || $is_s_instr || $is_b_instr;
+         ?$rs2_valid
+            $rs2[4:0] = $imem_rd_data[24:20];
          //rd 
-         $rd[4:0] = ( $is_i_instr || $is_r_instr || $is_u_instr || $is_j_instr ) ? $imem_rd_data[11:7] : {5{1'b0}};
+         $rd_valid = $is_i_instr || $is_r_instr || $is_u_instr || $is_j_instr ;
+         ?$rd_valid
+            $rd[4:0] = $imem_rd_data[11:7];
          //opcode
          $opcode[6:0] = $imem_rd_data[6:0];
+         
+         //identifying the instructions
+         $dec_bits[10:0] = { $funct7[5], $funct3, $opcode };
+         // branchs
+         $is_beq = $dec_bits ==? 11'bx_000_1100011;
+         $is_bne = $dec_bits ==? 11'bx_001_1100011;
+         $is_blt = $dec_bits ==? 11'bx_100_1100011;
+         $is_bge = $dec_bits ==? 11'bx_101_1100011;
+         $is_bltu = $dec_bits ==? 11'bx_110_1100011;
+         $is_bgeu = $dec_bits ==? 11'bx_111_1100011;
+         
+         //arithmetic add
+         $is_add = $dec_bits ==? 11'b0_000_0110011;
+         $is_addi = $dec_bits ==? 11'bx_000_0010011;
+         
+         //Silencing these signals for current work
+         `BOGUS_USE( $is_beq $is_bne $is_blt $is_bge $is_bltu $is_bgeu $is_add $is_addi )
+         
+         
 
       // Note: Because of the magic we are using for visualisation, if visualisation is enabled below,
       //       be sure to avoid having unassigned signals (which you might be using for random inputs)
