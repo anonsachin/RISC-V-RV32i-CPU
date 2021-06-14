@@ -185,6 +185,10 @@
          $valid_target_br = $valid && $target_br;
          //ALU
          ?$valid
+            //less unsigned than operations are put outside as they are
+            // used by other operations
+            $sltu_result = $is_sltu ? $src1_value < $src2_value : 1'b0; 
+            $sltiu_result = $is_sltiu ? $src1_value < $imm : 1'b0;
             $result[31:0] = 
                      $is_addi
                      ? $src1_value + $imm :
@@ -212,6 +216,22 @@
                      ? $src1_value << $src2_value[4:0] :
                      $is_srl
                      ? $src1_value >> $src2_value[4:0] :
+                     $is_lui
+                     ? { $imm[31:12], 12'b0 } :
+                     $is_auipc
+                     ? $pc + $imm :
+                     $is_jal
+                     ? $pc + 4 :
+                     $is_jalr
+                     ? $pc + 4 :
+                     $is_slti
+                     ? ( $src1_value[31] == $imm[31] ) ? $sltiu_result : { 31'b0, $src1_value[31] } :
+                     $is_slt
+                     ? ( $src1_value[31] == $src2_value[31] ) ? $sltu_result : { 31'b0, $src1_value[31] } :
+                     $is_srai
+                     ? { {32{$src1_value[1]}}, $src1_value } >> $imm[4:0] :
+                     $is_sra
+                     ? { {32{$src1_value[1]}}, $src1_value } >> $src2_value[4:0] :
                      32'bx;
 
          ?$target_br
