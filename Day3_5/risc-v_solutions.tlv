@@ -184,7 +184,7 @@
 
       @3
          //asserting validity of the operations
-         $valid = $valid_br | $valid_load;
+         $valid = $valid_br & $valid_load;
          //ALU
          ?$valid
             //less unsigned than operations are put outside as they are
@@ -270,8 +270,8 @@
          //Writing to register
          $rf_wr_en = ((( $rd == 5'd0 ) ? 1'b0 : $rd_valid) && $valid) | ( >>2$valid_load_op );
          ?$rd_valid
-            $rf_wr_index[4:0] = !$valid_load ? >>2$rd : $rd;
-            $rf_wr_data[31:0] = !$valid_load ? >>2$dmem_rd_data[31:0] : $result;
+            $rf_wr_index[4:0] = !$valid ? >>2$rd : $rd;
+            $rf_wr_data[31:0] = !$valid ? >>2$dmem_rd_data[31:0] : $result;
          
 
       // Note: Because of the magic we are using for visualisation, if visualisation is enabled below,
