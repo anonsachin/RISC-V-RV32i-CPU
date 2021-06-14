@@ -5,6 +5,8 @@ RISC-V_MYTH_Workshop
 
 Check the folders for assignments for particular days.
 
+For more detials about the workshop visit [Steve's Repo](https://github.com/stevehoover/RISC-V_MYTH_Workshop) 
+
 -----------------------------------------------
 The detail for ABI is found 
 ---------------------------
