@@ -12,7 +12,12 @@ The detail for ABI is found
 ---------------------------
 [ABI](Day2/README.md)
 
-----------------------------------------
+-----------------------------------------------
+The CPU details
+---------------
+[CPU](Day3_5/README.md)
+
+-----------------------------------------------
 Acknowledgements
 ----------------
 - [Kunal Ghosh](https://github.com/kunalg123), Co-founder, VSD Corp. Pvt. Ltd.
