@@ -32,6 +32,8 @@
    m4_asm(ADDI, r13, r13, 1)            // Increment intermediate register by 1
    m4_asm(BLT, r13, r12, 1111111111000) // If a3 is less than a2, branch to label named <loop>
    m4_asm(ADD, r10, r14, r0)            // Store final result to register a0 so that it can be read by main program
+   m4_asm(SW, r0, r10, 10000)           // Storing r10 value into memory
+   m4_asm(LW, r17, r0, 10000)           // Loading the Stored value into r17
    
    // Optional:
    // m4_asm(JAL, r7, 00000000000000000000) // Done. Jump to itself (infinite loop). (Up to 20-bit signed immediate plus implicit 0 bit (unlike JALR) provides byte address; last immediate bit should also be 0)
@@ -50,6 +52,8 @@
              ? 0 :
              >>3$valid_target_br
              ? >>3$br_target_pc :
+             >>3$valid_load_op
+             ? >>3$pc + 32'd4 :
              >>1$pc + 32'd4;
          // Getting instruction from memmory
          $imem_rd_en = $reset;
@@ -109,9 +113,40 @@
          $is_bltu = $dec_bits ==? 11'bx_110_1100011;
          $is_bgeu = $dec_bits ==? 11'bx_111_1100011;
 
-         //arithmetic add
+         //arithmetic 
          $is_add = $dec_bits ==? 11'b0_000_0110011;
          $is_addi = $dec_bits ==? 11'bx_000_0010011;
+         $is_sub = $dec_bits ==? 11'b1_000_0110011;
+         
+         //logical
+         $is_xor = $dec_bits ==? 11'b0_100_0110011;
+         $is_and = $dec_bits ==? 11'b0_111_0110011;
+         $is_or = $dec_bits ==? 11'b0_110_0110011;
+         $is_xori = $dec_bits ==? 11'bx_100_0010011;
+         $is_andi = $dec_bits ==? 11'bx_111_0010011;
+         $is_ori = $dec_bits ==? 11'bx_110_0010011;
+         
+         //others
+         $is_lui = $dec_bits ==? 11'bx_xxx_0110111;
+         $is_auipc = $dec_bits ==? 11'bx_xxx_0010111;
+         $is_jal = $dec_bits ==? 11'bx_xxx_1101111;
+         $is_jalr = $dec_bits ==? 11'bx_000_1100111;
+         $is_sb = $dec_bits ==? 11'bx_000_0100011;
+         $is_sw = $dec_bits ==? 11'bx_010_0100011;
+         $is_sh = $dec_bits ==? 11'bx_001_0100011;
+         $is_slti = $dec_bits ==? 11'bx_010_0010011;
+         $is_sltiu = $dec_bits ==? 11'bx_011_0010011;
+         $is_slli = $dec_bits ==? 11'b0_001_0010011;
+         $is_srli = $dec_bits ==? 11'b0_101_0010011;
+         $is_srai = $dec_bits ==? 11'b1_101_0010011;
+         $is_sll = $dec_bits ==? 11'b0_001_0110011;
+         $is_slt = $dec_bits ==? 11'b0_010_0110011;
+         $is_sltu = $dec_bits ==? 11'b0_011_0110011;
+         $is_srl = $dec_bits ==? 11'b0_101_0110011;
+         $is_sra = $dec_bits ==? 11'b1_101_0110011;
+         
+         //load
+         $is_load = $dec_bits ==? 11'bx_xxx_0000011;
 
          // extracting the immediate values for the instr
          $imm[31:0] = 
@@ -148,19 +183,78 @@
                              $rf_rd_data2;
 
       @3
-         //branching
-         $valid = !(>>1$target_br || >>2$target_br);
-         $target_br = $is_b_instr;
-         $valid_target_br = $valid && $target_br;
+         //asserting validity of the operations
+         $valid = $valid_br | $valid_load;
          //ALU
          ?$valid
+            //less unsigned than operations are put outside as they are
+            // used by other operations
+            $sltu_result = $is_sltu ? $src1_value < $src2_value : 1'b0; 
+            $sltiu_result = $is_sltiu ? $src1_value < $imm : 1'b0;
             $result[31:0] = 
-                     $is_addi
+                     ( $is_addi | $load_or_store )
                      ? $src1_value + $imm :
                      $is_add
                      ? $src1_value + $src2_value :
+                     $is_sub
+                     ? $src1_value - $src2_value :
+                     $is_andi
+                     ? $src1_value & $imm :
+                     $is_ori
+                     ? $src1_value | $imm :
+                     $is_xori
+                     ? $src1_value ^ $imm :
+                     $is_slli
+                     ? $src1_value << $imm[5:0] :
+                     $is_srli
+                     ? $src1_value >> $imm[5:0] :
+                     $is_xor
+                     ? $src1_value ^ $src2_value :
+                     $is_and
+                     ? $src1_value & $src2_value :
+                     $is_or
+                     ? $src1_value | $src2_value :
+                     $is_sll
+                     ? $src1_value << $src2_value[4:0] :
+                     $is_srl
+                     ? $src1_value >> $src2_value[4:0] :
+                     $is_lui
+                     ? { $imm[31:12], 12'b0 } :
+                     $is_auipc
+                     ? $pc + $imm :
+                     $is_jal
+                     ? $pc + 4 :
+                     $is_jalr
+                     ? $pc + 4 :
+                     $is_slti
+                     ? ( $src1_value[31] == $imm[31] ) ? $sltiu_result : { 31'b0, $src1_value[31] } :
+                     $is_slt
+                     ? ( $src1_value[31] == $src2_value[31] ) ? $sltu_result : { 31'b0, $src1_value[31] } :
+                     $is_srai
+                     ? { {32{$src1_value[1]}}, $src1_value } >> $imm[4:0] :
+                     $is_sra
+                     ? { {32{$src1_value[1]}}, $src1_value } >> $src2_value[4:0] :
                      32'bx;
-
+         // load
+         $target_load = $is_load;
+         $valid_load = !(>>1$target_load || >>2$target_load);
+         $valid_load_op = $valid_load && $target_load; //makes sure its not a load during bypass
+         $load_or_store = $is_load | $is_s_instr;
+         $valid_load_store = $valid & $load_or_store;
+         $dmem_wr_en = $is_s_instr;
+         $dmem_rd_en = $is_load;
+         ?$valid_load_store
+            $dmem_addr[3:0] = $result[5:2];
+         
+         $valid_store = $is_s_instr & $valid;
+         ?$valid_store
+            $dmem_wr_data[31:0] = $src2_value;
+         
+         //branching
+         $valid_br = !(>>1$target_br || >>2$target_br);
+         $target_br = $is_b_instr;
+         
+         $valid_target_br = $valid_br && $target_br; //makes sure its not a branch during bypass
          ?$target_br
             //based on the type of branching function and its
             //test we will update the pc else just update it
@@ -174,10 +268,10 @@
                                ($is_bgeu && ( $src1_value >= $src2_value ))
                                ? $pc + $imm : $pc + 32'd4;
          //Writing to register
-         $rf_wr_en = (( $rd == 5'd0 ) ? 1'b0 : $rd_valid) && $valid;
+         $rf_wr_en = ((( $rd == 5'd0 ) ? 1'b0 : $rd_valid) && $valid) | ( >>2$valid_load_op );
          ?$rd_valid
-            $rf_wr_index[4:0] = $rd;
-            $rf_wr_data[31:0] = $result;
+            $rf_wr_index[4:0] = !$valid_load ? >>2$rd : $rd;
+            $rf_wr_data[31:0] = !$valid_load ? >>2$dmem_rd_data[31:0] : $result;
          
 
       // Note: Because of the magic we are using for visualisation, if visualisation is enabled below,
@@ -186,7 +280,7 @@
 
    
    // Assert these to end simulation (before Makerchip cycle limit).
-   *passed = |cpu/xreg[10]>>5$value == (1+2+3+4+5+6+7+8+9); //*cyc_cnt > 40;
+   *passed = |cpu/xreg[17]>>5$value == (1+2+3+4+5+6+7+8+9); //*cyc_cnt > 40;
    *failed = 1'b0;
    
    // Macro instantiations for:
@@ -197,8 +291,8 @@
    |cpu
       m4+imem(@1)    // Args: (read stage)
       m4+rf(@2, @3)  // Args: (read stage, write stage) - if equal, no register bypass is required
-      //m4+dmem(@4)    // Args: (read/write stage)
+      m4+dmem(@4)    // Args: (read/write stage)
    
-   m4+cpu_viz(@5)    // For visualisation, argument should be at least equal to the last stage of CPU logic. @4 would work for all labs.
+   m4+cpu_viz(@4)    // For visualisation, argument should be at least equal to the last stage of CPU logic. @4 would work for all labs.
 \SV
    endmodule
