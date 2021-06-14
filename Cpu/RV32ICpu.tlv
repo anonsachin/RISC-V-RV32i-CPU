@@ -54,6 +54,8 @@
              ? >>3$br_target_pc :
              >>3$valid_load_op
              ? >>3$pc + 32'd4 :
+             >>3$valid_jump
+             ? >>3$jump_target_pc :
              >>1$pc + 32'd4;
          // Getting instruction from memmory
          $imem_rd_en = $reset;
@@ -184,7 +186,7 @@
 
       @3
          //asserting validity of the operations
-         $valid = $valid_br | $valid_load;
+         $valid = $valid_br & $valid_load & $valid_jump;
          //ALU
          ?$valid
             //less unsigned than operations are put outside as they are
@@ -235,7 +237,7 @@
                      $is_sra
                      ? { {32{$src1_value[1]}}, $src1_value } >> $src2_value[4:0] :
                      32'bx;
-         // load
+         // load and store
          $target_load = $is_load;
          $valid_load = !(>>1$target_load || >>2$target_load);
          $valid_load_op = $valid_load && $target_load; //makes sure its not a load during bypass
@@ -249,6 +251,16 @@
          $valid_store = $is_s_instr & $valid;
          ?$valid_store
             $dmem_wr_data[31:0] = $src2_value;
+         
+         // jumps
+         $is_jump = $is_jal | $is_jalr;
+         $valid_jump = !(>>1$is_jump | >>2$is_jump);
+         ?$valid_jump
+            $jump_target_pc[31:0] = 
+                             $is_jal
+                             ? $pc + $imm :
+                             $is_jalr
+                             ? $src1_value + $imm : $pc;
          
          //branching
          $valid_br = !(>>1$target_br || >>2$target_br);
@@ -270,8 +282,8 @@
          //Writing to register
          $rf_wr_en = ((( $rd == 5'd0 ) ? 1'b0 : $rd_valid) && $valid) | ( >>2$valid_load_op );
          ?$rd_valid
-            $rf_wr_index[4:0] = !$valid_load ? >>2$rd : $rd;
-            $rf_wr_data[31:0] = !$valid_load ? >>2$dmem_rd_data[31:0] : $result;
+            $rf_wr_index[4:0] = !$valid ? >>2$rd : $rd;
+            $rf_wr_data[31:0] = !$valid ? >>2$dmem_rd_data[31:0] : $result;
          
 
       // Note: Because of the magic we are using for visualisation, if visualisation is enabled below,
